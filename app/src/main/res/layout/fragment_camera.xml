@@ -16,90 +16,48 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical"
-            android:layout_weight="1">
+            android:layout_weight="1"
+            android:weightSum="2">
 
-            <EditText
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="What is this picture about?"/>
+            <Button
+                android:id="@+id/btn_remove"
+                android:layout_width="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="0.1"
+                android:drawableLeft="@drawable/ic_delete_black_24dp"
+                android:background="@android:color/transparent"
+                android:text="@string/btn_remove"
+                android:visibility="gone"/>
 
             <ImageView
                 android:id="@+id/result_image"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1.7"
                 android:src="@drawable/ic_picture_holder" />
 
         </LinearLayout>
 
-        <ScrollView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_weight="2">
+            android:orientation="vertical"
+            android:layout_weight="2"
+            android:weightSum="2">
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:layout_height="0dp"
+                android:layout_weight="1.8">
 
-                <ImageView
+                <ListView
+                    android:id="@+id/image_list_view"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/ic_picture_holder"
-                    android:layout_marginBottom="5dp"
-                    android:layout_weight="1"/>
-
-                <ImageView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/ic_picture_holder"
-                    android:layout_marginBottom="5dp"
-                    android:layout_weight="1"/>
-
-                <ImageView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/ic_picture_holder"
-                    android:layout_marginBottom="5dp"
-                    android:layout_weight="1"/>
-
-                <ImageView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/ic_picture_holder"
-                    android:layout_marginBottom="5dp"
-                    android:layout_weight="1"/>
-
-                <ImageView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/ic_picture_holder"
-                    android:layout_marginBottom="5dp"
-                    android:layout_weight="1"/>
-
-                <ImageView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/ic_picture_holder"
-                    android:layout_marginBottom="5dp"
-                    android:layout_weight="1"/>
-
-                <ImageView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/ic_picture_holder"
-                    android:layout_marginBottom="5dp"
-                    android:layout_weight="1"/>
-
-                <ImageView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/ic_picture_holder"
-                    android:layout_marginBottom="5dp"
-                    android:layout_weight="1"/>
+                    android:layout_height="wrap_content"></ListView>
 
             </LinearLayout>
 
-        </ScrollView>
+        </LinearLayout>
 
     </LinearLayout>
 
@@ -114,12 +72,25 @@
             android:id="@+id/btn_take_picture"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Take Picture"
+            android:text="@string/btn_take_picture"
             android:background="@color/btnInfo"
             android:paddingHorizontal="20dp"
             android:textColor="@color/colorWhite"
             android:layout_gravity="center_horizontal"
             android:layout_weight="1"/>
+
+        <Button
+            android:id="@+id/btn_done"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="5dp"
+            android:text="@string/btn_done_and_save"
+            android:background="@color/btnSuccess"
+            android:paddingHorizontal="20dp"
+            android:textColor="@color/colorWhite"
+            android:layout_gravity="center_horizontal"
+            android:layout_weight="1"
+            android:visibility="gone"/>
 
     </LinearLayout>
 

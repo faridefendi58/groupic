@@ -32,7 +32,7 @@ public class MainActivity extends AppCompatActivity
                 actionBar.hide();
                 break;
 
-            case R.id.navigation_notifications:
+            case R.id.navigation_settings:
                 break;
         }
 
