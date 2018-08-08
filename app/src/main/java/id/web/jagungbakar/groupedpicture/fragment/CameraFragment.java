@@ -1,6 +1,8 @@
 package id.web.jagungbakar.groupedpicture.fragment;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -14,7 +16,9 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
@@ -31,6 +35,8 @@ public class CameraFragment extends Fragment {
     Button button_remove;
     ImageView imageView;
     ListView image_list_view;
+    LinearLayout list_container;
+
     private ArrayList<HashMap<String,Bitmap>> imageList = new ArrayList<>();
     private int current_preview;
 
@@ -46,6 +52,7 @@ public class CameraFragment extends Fragment {
         button_remove = (Button) rootView.findViewById(R.id.btn_remove);
         imageView = (ImageView) rootView.findViewById(R.id.result_image);
         image_list_view = (ListView) rootView.findViewById(R.id.image_list_view);
+        list_container = (LinearLayout) rootView.findViewById(R.id.list_container);
 
         button.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -55,6 +62,25 @@ public class CameraFragment extends Fragment {
                 startActivityForResult(intent,
                         CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE);
 
+            }
+        });
+
+        button_remove.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                AlertDialog.Builder alert = new AlertDialog.Builder(getActivity());
+                        alert.setMessage(getResources().getString(R.string.confirm_delete))
+                        .setIcon(android.R.drawable.ic_dialog_alert)
+                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+
+                            public void onClick(DialogInterface dialog, int whichButton) {
+                                _remove_item();
+                                Toast.makeText(
+                                        getContext(),
+                                        getResources().getString(R.string.delete_success_message),
+                                        Toast.LENGTH_SHORT).show();
+                            }})
+                        .setNegativeButton(android.R.string.no, null).show();
             }
         });
 
@@ -87,6 +113,7 @@ public class CameraFragment extends Fragment {
                 imageView.setImageBitmap(bitmap);
                 button_done.setVisibility(View.VISIBLE);
                 button_remove.setVisibility(View.VISIBLE);
+                list_container.setVisibility(View.VISIBLE);
 
                 rebuildTheImageList();
             }
@@ -107,5 +134,19 @@ public class CameraFragment extends Fragment {
                 current_preview = position;
             }
         });
+    }
+
+    private void _remove_item() {
+        imageList.remove(current_preview);
+        int size = imageList.size();
+        if (size == 0) {
+            button_done.setVisibility(View.GONE);
+            button_remove.setVisibility(View.GONE);
+            list_container.setVisibility(View.GONE);
+            imageView.setImageDrawable(getResources().getDrawable(R.drawable.ic_picture_holder));
+        } else {
+            rebuildTheImageList();
+            imageView.setImageBitmap(imageList.get(size-1).get("img"));
+        }
     }
 }
