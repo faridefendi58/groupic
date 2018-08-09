@@ -1,9 +1,11 @@
 package id.web.jagungbakar.groupedpicture.fragment;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
@@ -11,6 +13,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.FileProvider;
 import android.util.Log;
@@ -42,6 +45,8 @@ import id.web.jagungbakar.groupedpicture.ImageListAdapter;
 public class CameraFragment extends Fragment {
 
     private static final int CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE = 1888;
+    private static final String LOG_TAG = "MainActivity";
+
     Button button;
     Button button_done;
     Button button_remove;
@@ -60,6 +65,8 @@ public class CameraFragment extends Fragment {
 
         final View rootView = inflater.inflate(R.layout.fragment_camera,
                 container, false);
+
+        verifyStoragePermissions(getActivity());
 
         button = (Button) rootView.findViewById(R.id.btn_take_picture);
         button_done = (Button) rootView.findViewById(R.id.btn_done);
@@ -224,8 +231,6 @@ public class CameraFragment extends Fragment {
     }
 
     public void saveImage() {
-        Log.e(getActivity().getClass().getSimpleName(), "imageList : "+ imageList.toString());
-        Log.e(getActivity().getClass().getSimpleName(), "imageListAttributes : "+ imageListAttributes.toString());
         imageList.clear();
         imageListAttributes.clear();
 
@@ -257,17 +262,25 @@ public class CameraFragment extends Fragment {
         // Create an image file name
         String timeStamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         String imageFileName = "IMG" + timeStamp + "_";
-        File storageDir = getActivity().getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        // cachec storage dir, deleted on uninstalled app
+        //File storageDir = getActivity().getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+
+        File storageDir = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES + File.separator + "GroupedPicture" + File.separator);
+
+        if (!storageDir.mkdirs()) {
+            Log.e(getActivity().getClass().getSimpleName(), "Directory not created");
+        }
         File image = File.createTempFile(
-                imageFileName,  /* prefix */
-                ".jpg",         /* suffix */
-                storageDir      /* directory */
+                imageFileName,
+                ".jpg",
+                storageDir
         );
 
         // Save a file: path for use with ACTION_VIEW intents
         mCurrentPhotoPath = image.getAbsolutePath();
         mCurrentFileName = image.getName();
-        Log.e(getActivity().getClass().getSimpleName(),"mCurrentPhotoPath : "+ mCurrentPhotoPath);
+        //Log.e(getActivity().getClass().getSimpleName(),"mCurrentPhotoPath : "+ mCurrentPhotoPath);
         return image;
     }
 
@@ -290,9 +303,47 @@ public class CameraFragment extends Fragment {
                 Uri photoURI = FileProvider.getUriForFile(getContext(),
                         "com.example.android.fileprovider",
                         photoFile);
+                //Log.e(LOG_TAG, "photoUri : "+ photoURI.toString());
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
                 startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
             }
+        }
+    }
+
+    /* Checks if external storage is available for read and write */
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
+    // Storage Permissions
+    private static final int REQUEST_EXTERNAL_STORAGE = 1;
+    private static String[] PERMISSIONS_STORAGE = {
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+    };
+
+    /**
+     * Checks if the app has permission to write to device storage
+     *
+     * If the app does not has permission then the user will be prompted to grant permissions
+     *
+     * @param activity
+     */
+    public static void verifyStoragePermissions(Activity activity) {
+        // Check if we have write permission
+        int permission = ActivityCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            // We don't have permission so prompt the user
+            ActivityCompat.requestPermissions(
+                    activity,
+                    PERMISSIONS_STORAGE,
+                    REQUEST_EXTERNAL_STORAGE
+            );
         }
     }
 }
