@@ -6,11 +6,16 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.FileProvider;
+import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -21,7 +26,14 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 
 import id.web.jagungbakar.groupedpicture.R;
@@ -33,11 +45,13 @@ public class CameraFragment extends Fragment {
     Button button;
     Button button_done;
     Button button_remove;
+    Button btn_minimize;
     ImageView imageView;
     ListView image_list_view;
     LinearLayout list_container;
 
     private ArrayList<HashMap<String,Bitmap>> imageList = new ArrayList<>();
+    private ArrayList<HashMap<String,String>> imageListAttributes = new ArrayList<>();
     private int current_preview;
 
     @Nullable
@@ -50,6 +64,7 @@ public class CameraFragment extends Fragment {
         button = (Button) rootView.findViewById(R.id.btn_take_picture);
         button_done = (Button) rootView.findViewById(R.id.btn_done);
         button_remove = (Button) rootView.findViewById(R.id.btn_remove);
+        btn_minimize = (Button) rootView.findViewById(R.id.btn_minimize);
         imageView = (ImageView) rootView.findViewById(R.id.result_image);
         image_list_view = (ListView) rootView.findViewById(R.id.image_list_view);
         list_container = (LinearLayout) rootView.findViewById(R.id.list_container);
@@ -57,10 +72,10 @@ public class CameraFragment extends Fragment {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
-                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                dispatchTakePictureIntent();
+                /*Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                 startActivityForResult(intent,
-                        CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE);
+                        CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE);*/
 
             }
         });
@@ -84,39 +99,96 @@ public class CameraFragment extends Fragment {
             }
         });
 
+        imageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                list_container.setVisibility(View.GONE);
+                btn_minimize.setVisibility(View.VISIBLE);
+            }
+        });
+
+        btn_minimize.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                list_container.setVisibility(View.VISIBLE);
+                btn_minimize.setVisibility(View.GONE);
+            }
+        });
+
+        button_done.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                saveImage();
+            }
+        });
+
         return rootView;
 
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE) {
-            if (resultCode == Activity.RESULT_OK) {
+        if (requestCode == CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+            Bundle extras = data.getExtras();
+            Bitmap imageBitmap = (Bitmap) extras.get("data");
+            imageView.setImageBitmap(imageBitmap);
 
-                Bitmap bmp = (Bitmap) data.getExtras().get("data");
-                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            HashMap<String,Bitmap> map = new HashMap<>();
+            map.put("img", imageBitmap);
+            imageList.add(map);
 
-                bmp.compress(Bitmap.CompressFormat.PNG, 100, stream);
-                byte[] byteArray = stream.toByteArray();
+            HashMap<String,String> mapAttr = new HashMap<>();
+            mapAttr.put("mCurrentFileName", mCurrentFileName);
+            mapAttr.put("current_path", mCurrentPhotoPath);
+            imageListAttributes.add(mapAttr);
 
-                // convert byte array to Bitmap
+            current_preview = imageList.size() - 1;
 
-                Bitmap bitmap = BitmapFactory.decodeByteArray(byteArray, 0,
-                        byteArray.length);
+            button_done.setVisibility(View.VISIBLE);
+            button_remove.setVisibility(View.VISIBLE);
+            list_container.setVisibility(View.VISIBLE);
 
-                HashMap<String,Bitmap> map = new HashMap<>();
-                map.put("img", bitmap);
-                imageList.add(map);
+            rebuildTheImageList();
+        }
+        if (requestCode == REQUEST_TAKE_PHOTO && resultCode == Activity.RESULT_OK) {
+            // Get the dimensions of the View
+            int targetW = imageView.getWidth();
+            int targetH = imageView.getHeight();
 
-                current_preview = imageList.size() - 1;
+            // Get the dimensions of the bitmap
+            BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+            bmOptions.inJustDecodeBounds = true;
+            BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
+            int photoW = bmOptions.outWidth;
+            int photoH = bmOptions.outHeight;
 
-                imageView.setImageBitmap(bitmap);
-                button_done.setVisibility(View.VISIBLE);
-                button_remove.setVisibility(View.VISIBLE);
-                list_container.setVisibility(View.VISIBLE);
+            // Determine how much to scale down the image
+            int scaleFactor = Math.min(photoW/targetW, photoH/targetH);
 
-                rebuildTheImageList();
-            }
+            // Decode the image file into a Bitmap sized to fill the View
+            bmOptions.inJustDecodeBounds = false;
+            bmOptions.inSampleSize = scaleFactor;
+            bmOptions.inPurgeable = true;
+
+            Bitmap bitmap = BitmapFactory.decodeFile(mCurrentPhotoPath, bmOptions);
+            imageView.setImageBitmap(bitmap);
+
+            HashMap<String,Bitmap> map = new HashMap<>();
+            map.put("img", bitmap);
+            imageList.add(map);
+
+            HashMap<String,String> mapAttr = new HashMap<>();
+            mapAttr.put("file_name", mCurrentFileName);
+            mapAttr.put("file_path", mCurrentPhotoPath);
+            imageListAttributes.add(mapAttr);
+
+            current_preview = imageList.size() - 1;
+
+            button_done.setVisibility(View.VISIBLE);
+            button_remove.setVisibility(View.VISIBLE);
+            list_container.setVisibility(View.VISIBLE);
+
+            rebuildTheImageList();
         }
     }
 
@@ -138,15 +210,89 @@ public class CameraFragment extends Fragment {
 
     private void _remove_item() {
         imageList.remove(current_preview);
+        imageListAttributes.remove(current_preview);
         int size = imageList.size();
         if (size == 0) {
             button_done.setVisibility(View.GONE);
             button_remove.setVisibility(View.GONE);
             list_container.setVisibility(View.GONE);
-            imageView.setImageDrawable(getResources().getDrawable(R.drawable.ic_picture_holder));
+            imageView.setImageDrawable(getResources().getDrawable(R.drawable.ic_picture_holder_256));
         } else {
             rebuildTheImageList();
             imageView.setImageBitmap(imageList.get(size-1).get("img"));
+        }
+    }
+
+    public void saveImage() {
+        Log.e(getActivity().getClass().getSimpleName(), "imageList : "+ imageList.toString());
+        Log.e(getActivity().getClass().getSimpleName(), "imageListAttributes : "+ imageListAttributes.toString());
+        imageList.clear();
+        imageListAttributes.clear();
+
+        button_done.setVisibility(View.GONE);
+        button_remove.setVisibility(View.GONE);
+        list_container.setVisibility(View.GONE);
+        imageView.setImageDrawable(getResources().getDrawable(R.drawable.ic_picture_holder_256));
+
+        //remove the backup
+        /*for (int i = 0; i < imageListAttributes.size(); i++) {
+            try {
+                File file = new File(imageListAttributes.get(i).get("file_path"));
+                boolean deleted = file.delete();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }*/
+
+        Toast.makeText(
+                getContext(),
+                getResources().getString(R.string.save_success_message),
+                Toast.LENGTH_SHORT).show();
+    }
+
+    String mCurrentPhotoPath;
+    String mCurrentFileName;
+
+    private File createImageFile() throws IOException {
+        // Create an image file name
+        String timeStamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+        String imageFileName = "IMG" + timeStamp + "_";
+        File storageDir = getActivity().getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+        File image = File.createTempFile(
+                imageFileName,  /* prefix */
+                ".jpg",         /* suffix */
+                storageDir      /* directory */
+        );
+
+        // Save a file: path for use with ACTION_VIEW intents
+        mCurrentPhotoPath = image.getAbsolutePath();
+        mCurrentFileName = image.getName();
+        Log.e(getActivity().getClass().getSimpleName(),"mCurrentPhotoPath : "+ mCurrentPhotoPath);
+        return image;
+    }
+
+    static final int REQUEST_TAKE_PHOTO = 1;
+    private Intent takePictureIntent;
+    private File photoFile = null;
+
+    private void dispatchTakePictureIntent() {
+        takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        // Ensure that there's a camera activity to handle the intent
+        if (takePictureIntent.resolveActivity(getActivity().getPackageManager()) != null) {
+            // Create the File where the photo should go
+            try {
+                photoFile = createImageFile();
+            } catch (IOException ex) {
+                // Error occurred while creating the File
+                ex.printStackTrace();
+            }
+            if (photoFile != null) {
+                Uri photoURI = FileProvider.getUriForFile(getContext(),
+                        "com.example.android.fileprovider",
+                        photoFile);
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
+                startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
+            }
         }
     }
 }

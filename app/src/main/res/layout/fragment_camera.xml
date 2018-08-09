@@ -19,7 +19,37 @@
             android:layout_weight="1"
             android:weightSum="2">
 
-            <Button
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:orientation="horizontal"
+                android:layout_weight="0.1"
+                android:weightSum="2">
+
+                <Button
+                    android:id="@+id/btn_remove"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="left"
+                    android:drawableLeft="@drawable/ic_delete_black_24dp"
+                    android:background="@android:color/transparent"
+                    android:text="@string/btn_remove"
+                    android:visibility="gone"/>
+
+                <Button
+                    android:id="@+id/btn_minimize"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="right"
+                    android:drawableRight="@drawable/ic_zoom_out_black_24dp"
+                    android:background="@android:color/transparent"
+                    android:text="@string/btn_minimize"
+                    android:visibility="gone"/>
+
+            </LinearLayout>
+            <!--<Button
                 android:id="@+id/btn_remove"
                 android:layout_width="wrap_content"
                 android:layout_height="0dp"
@@ -27,14 +57,15 @@
                 android:drawableLeft="@drawable/ic_delete_black_24dp"
                 android:background="@android:color/transparent"
                 android:text="@string/btn_remove"
-                android:visibility="gone"/>
+                android:visibility="gone"/>-->
 
             <ImageView
                 android:id="@+id/result_image"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
+                android:layout_gravity="center_horizontal"
                 android:layout_weight="1.7"
-                android:src="@drawable/ic_picture_holder" />
+                android:src="@drawable/ic_picture_holder_256" />
 
         </LinearLayout>
 
