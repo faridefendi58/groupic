@@ -29,7 +29,7 @@ public class PictureController {
         database = db;
     }
 
-    public Object getItems() {
+    public List<Object> getItems() {
         List<Object> contents = database.select("SELECT * FROM " + DatabaseContents.TABLE_PICTURES);
 
         return contents;
@@ -47,5 +47,9 @@ public class PictureController {
         int id = database.insert(DatabaseContents.TABLE_PICTURES.toString(), content);
 
         return id;
+    }
+
+    public boolean removePicture(int id) {
+        return database.delete(DatabaseContents.TABLE_PICTURES.toString(), id);
     }
 }

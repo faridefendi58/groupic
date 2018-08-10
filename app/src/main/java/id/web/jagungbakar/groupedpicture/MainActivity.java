@@ -9,6 +9,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.MenuItem;
 import android.widget.TextView;
 
+import id.web.jagungbakar.groupedpicture.controllers.GroupController;
 import id.web.jagungbakar.groupedpicture.controllers.PictureController;
 import id.web.jagungbakar.groupedpicture.fragment.CameraFragment;
 import id.web.jagungbakar.groupedpicture.fragment.LibraryFragment;
@@ -67,6 +68,7 @@ public class MainActivity extends AppCompatActivity
     private void initCoreApp() {
         database = new DatabaseHelper(this);
         PictureController.setDatabase(database);
+        GroupController.setDatabase(database);
 
         DateTimeStrategy.setLocale("id", "ID");
     }

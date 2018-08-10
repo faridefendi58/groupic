@@ -31,6 +31,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.webkit.MimeTypeMap;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -50,7 +51,9 @@ import java.util.List;
 
 import id.web.jagungbakar.groupedpicture.R;
 import id.web.jagungbakar.groupedpicture.ImageListAdapter;
+import id.web.jagungbakar.groupedpicture.controllers.GroupController;
 import id.web.jagungbakar.groupedpicture.controllers.PictureController;
+import id.web.jagungbakar.groupedpicture.models.Groups;
 import id.web.jagungbakar.groupedpicture.models.Pictures;
 
 public class CameraFragment extends Fragment {
@@ -69,9 +72,12 @@ public class CameraFragment extends Fragment {
     LinearLayout list_container;
     LinearLayout btn_container;
 
+    private AlertDialog dialog;
+
     private ArrayList<HashMap<String,Bitmap>> imageList = new ArrayList<>();
     private ArrayList<HashMap<String,String>> imageListAttributes = new ArrayList<>();
     private int current_preview;
+    private int group_id = 0;
 
     @Nullable
     @Override
@@ -142,7 +148,45 @@ public class CameraFragment extends Fragment {
         button_done.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                saveImage();
+                AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                View mView = getLayoutInflater().inflate(R.layout.dialog_add_note, null);
+
+                builder.setView(mView);
+                dialog = builder.create();
+
+                final EditText input_title = (EditText) mView.findViewById(R.id.input_title);
+                final EditText input_description = (EditText) mView.findViewById(R.id.input_description);
+                Button btn_dialog_submit = (Button) mView.findViewById(R.id.btn_dialog_submit);
+                btn_dialog_submit.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        dialog.hide();
+                        if (input_title.getText().toString().length() > 0) {
+                            String desc = " ";
+                            if (input_description.getText().toString().length() > 0) {
+                                desc = input_description.getText().toString();
+                            }
+                            Groups groups = new Groups(
+                                    input_title.getText().toString(),
+                                    desc
+                            );
+                            int id = GroupController.getInstance().addGroup(groups);
+                            if (id > 0) {
+                                group_id = id;
+                            }
+                        }
+
+                        saveImage();
+                    }
+                });
+                dialog.show();
+
+                /*builder.setMessage(getResources().getString(R.string.confirm_save))
+                        .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int whichButton) {
+                                saveImage();
+                            }})
+                        .setNegativeButton(android.R.string.no, null).show();*/
             }
         });
 
@@ -270,7 +314,7 @@ public class CameraFragment extends Fragment {
                     imageListAttributes.get(i).get("file_type"),
                     file_size,
                     imageListAttributes.get(i).get("file_dir"),
-                    0
+                    group_id
             );
             int id = PictureController.getInstance().addPicture(pictures);
         }
@@ -408,7 +452,7 @@ public class CameraFragment extends Fragment {
     private Animator mCurrentAnimator;
     private int mShortAnimationDuration;
 
-    private void zoomImageFromThumb(final View thumbView, int imageResId) {
+    public void zoomImageFromThumb(final View thumbView, int imageResId) {
         // If there's an animation in progress, cancel it
         // immediately and proceed with this one.
         if (mCurrentAnimator != null) {
@@ -556,5 +600,9 @@ public class CameraFragment extends Fragment {
                 mCurrentAnimator = set;
             }
         });
+    }
+
+    public void closeDialog(View view) {
+        dialog.hide();
     }
 }
