@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/fcamera_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="8dp"
@@ -49,15 +50,6 @@
                     android:visibility="gone"/>
 
             </LinearLayout>
-            <!--<Button
-                android:id="@+id/btn_remove"
-                android:layout_width="wrap_content"
-                android:layout_height="0dp"
-                android:layout_weight="0.1"
-                android:drawableLeft="@drawable/ic_delete_black_24dp"
-                android:background="@android:color/transparent"
-                android:text="@string/btn_remove"
-                android:visibility="gone"/>-->
 
             <ImageView
                 android:id="@+id/result_image"
@@ -66,6 +58,12 @@
                 android:layout_gravity="center_horizontal"
                 android:layout_weight="1.7"
                 android:src="@drawable/ic_picture_holder_256" />
+
+            <ImageView
+                android:id="@+id/expanded_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
 
         </LinearLayout>
 
@@ -95,6 +93,7 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/btn_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"

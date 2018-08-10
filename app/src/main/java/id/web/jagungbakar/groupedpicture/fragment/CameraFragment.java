@@ -1,6 +1,10 @@
 package id.web.jagungbakar.groupedpicture.fragment;
 
 import android.Manifest;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
@@ -8,6 +12,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Point;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -21,6 +27,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -38,6 +45,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 
 import id.web.jagungbakar.groupedpicture.R;
 import id.web.jagungbakar.groupedpicture.ImageListAdapter;
@@ -47,6 +55,8 @@ public class CameraFragment extends Fragment {
     private static final int CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE = 1888;
     private static final String LOG_TAG = "MainActivity";
 
+    private View rootView;
+
     Button button;
     Button button_done;
     Button button_remove;
@@ -54,6 +64,7 @@ public class CameraFragment extends Fragment {
     ImageView imageView;
     ListView image_list_view;
     LinearLayout list_container;
+    LinearLayout btn_container;
 
     private ArrayList<HashMap<String,Bitmap>> imageList = new ArrayList<>();
     private ArrayList<HashMap<String,String>> imageListAttributes = new ArrayList<>();
@@ -63,7 +74,7 @@ public class CameraFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
 
-        final View rootView = inflater.inflate(R.layout.fragment_camera,
+        rootView = inflater.inflate(R.layout.fragment_camera,
                 container, false);
 
         verifyStoragePermissions(getActivity());
@@ -75,6 +86,7 @@ public class CameraFragment extends Fragment {
         imageView = (ImageView) rootView.findViewById(R.id.result_image);
         image_list_view = (ListView) rootView.findViewById(R.id.image_list_view);
         list_container = (LinearLayout) rootView.findViewById(R.id.list_container);
+        btn_container = (LinearLayout) rootView.findViewById(R.id.btn_container);
 
         button.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -109,10 +121,12 @@ public class CameraFragment extends Fragment {
         imageView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                list_container.setVisibility(View.GONE);
-                btn_minimize.setVisibility(View.VISIBLE);
+                //btn_minimize.setVisibility(View.VISIBLE);
+                zoomImageFromThumb(imageView, R.drawable.ic_picture_holder_256);
             }
         });
+        mShortAnimationDuration = getResources().getInteger(
+                android.R.integer.config_shortAnimTime);
 
         btn_minimize.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -216,6 +230,12 @@ public class CameraFragment extends Fragment {
     }
 
     private void _remove_item() {
+        File file = new File(imageListAttributes.get(current_preview).get("file_path"));
+        boolean deleted = false;
+        if (file.isFile()) {
+            deleted = file.delete();
+        }
+
         imageList.remove(current_preview);
         imageListAttributes.remove(current_preview);
         int size = imageList.size();
@@ -239,15 +259,15 @@ public class CameraFragment extends Fragment {
         list_container.setVisibility(View.GONE);
         imageView.setImageDrawable(getResources().getDrawable(R.drawable.ic_picture_holder_256));
 
-        //remove the backup
-        /*for (int i = 0; i < imageListAttributes.size(); i++) {
-            try {
-                File file = new File(imageListAttributes.get(i).get("file_path"));
-                boolean deleted = file.delete();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }*/
+        //remove the backup if any
+        String[] fileNames = storageDir.list();
+
+        for (String fileName : fileNames) {
+            File file = new File(storageDir.getPath() + "/" + fileName);
+            int file_size = Integer.parseInt(String.valueOf(file.length()/1024));
+            if (file_size == 0)
+                file.delete();
+        }
 
         Toast.makeText(
                 getContext(),
@@ -257,6 +277,7 @@ public class CameraFragment extends Fragment {
 
     String mCurrentPhotoPath;
     String mCurrentFileName;
+    private File storageDir;
 
     private File createImageFile() throws IOException {
         // Create an image file name
@@ -265,12 +286,16 @@ public class CameraFragment extends Fragment {
         // cachec storage dir, deleted on uninstalled app
         //File storageDir = getActivity().getExternalFilesDir(Environment.DIRECTORY_PICTURES);
 
-        File storageDir = Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES + File.separator + "GroupedPicture" + File.separator);
+        storageDir = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_PICTURES + File.separator +
+                        getResources().getString(R.string.folder_name) + File.separator);
 
-        if (!storageDir.mkdirs()) {
-            Log.e(getActivity().getClass().getSimpleName(), "Directory not created");
+        if (!storageDir.isDirectory()) {
+            if (!storageDir.mkdirs()) {
+                Log.e(getActivity().getClass().getSimpleName(), "Directory not created");
+            }
         }
+
         File image = File.createTempFile(
                 imageFileName,
                 ".jpg",
@@ -280,7 +305,7 @@ public class CameraFragment extends Fragment {
         // Save a file: path for use with ACTION_VIEW intents
         mCurrentPhotoPath = image.getAbsolutePath();
         mCurrentFileName = image.getName();
-        //Log.e(getActivity().getClass().getSimpleName(),"mCurrentPhotoPath : "+ mCurrentPhotoPath);
+
         return image;
     }
 
@@ -303,7 +328,7 @@ public class CameraFragment extends Fragment {
                 Uri photoURI = FileProvider.getUriForFile(getContext(),
                         "com.example.android.fileprovider",
                         photoFile);
-                //Log.e(LOG_TAG, "photoUri : "+ photoURI.toString());
+
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI);
                 startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
             }
@@ -345,5 +370,158 @@ public class CameraFragment extends Fragment {
                     REQUEST_EXTERNAL_STORAGE
             );
         }
+    }
+
+    private Animator mCurrentAnimator;
+    private int mShortAnimationDuration;
+
+    private void zoomImageFromThumb(final View thumbView, int imageResId) {
+        // If there's an animation in progress, cancel it
+        // immediately and proceed with this one.
+        if (mCurrentAnimator != null) {
+            mCurrentAnimator.cancel();
+        }
+
+        // Load the high-resolution "zoomed-in" image.
+        final ImageView expandedImageView = (ImageView) rootView.findViewById(R.id.expanded_image);
+        if (imageList.size() > 0) {
+            expandedImageView.setImageBitmap(imageList.get(current_preview).get("img"));
+        } else {
+            expandedImageView.setImageResource(imageResId);
+        }
+
+        list_container.setVisibility(View.GONE);
+        btn_container.setVisibility(View.GONE);
+
+        // Calculate the starting and ending bounds for the zoomed-in image.
+        // This step involves lots of math. Yay, math.
+        final Rect startBounds = new Rect();
+        final Rect finalBounds = new Rect();
+        final Point globalOffset = new Point();
+
+        // The start bounds are the global visible rectangle of the thumbnail,
+        // and the final bounds are the global visible rectangle of the container
+        // view. Also set the container view's offset as the origin for the
+        // bounds, since that's the origin for the positioning animation
+        // properties (X, Y).
+        thumbView.getGlobalVisibleRect(startBounds);
+        rootView.findViewById(R.id.fcamera_container)
+                .getGlobalVisibleRect(finalBounds, globalOffset);
+        startBounds.offset(-globalOffset.x, -globalOffset.y);
+        finalBounds.offset(-globalOffset.x, -globalOffset.y);
+
+        // Adjust the start bounds to be the same aspect ratio as the final
+        // bounds using the "center crop" technique. This prevents undesirable
+        // stretching during the animation. Also calculate the start scaling
+        // factor (the end scaling factor is always 1.0).
+        float startScale;
+        if ((float) finalBounds.width() / finalBounds.height()
+                > (float) startBounds.width() / startBounds.height()) {
+            // Extend start bounds horizontally
+            startScale = (float) startBounds.height() / finalBounds.height();
+            float startWidth = startScale * finalBounds.width();
+            float deltaWidth = (startWidth - startBounds.width()) / 2;
+            startBounds.left -= deltaWidth;
+            startBounds.right += deltaWidth;
+        } else {
+            // Extend start bounds vertically
+            startScale = (float) startBounds.width() / finalBounds.width();
+            float startHeight = startScale * finalBounds.height();
+            float deltaHeight = (startHeight - startBounds.height()) / 2;
+            startBounds.top -= deltaHeight;
+            startBounds.bottom += deltaHeight;
+        }
+
+        // Hide the thumbnail and show the zoomed-in view. When the animation
+        // begins, it will position the zoomed-in view in the place of the
+        // thumbnail.
+        thumbView.setAlpha(0f);
+        expandedImageView.setVisibility(View.VISIBLE);
+
+        // Set the pivot point for SCALE_X and SCALE_Y transformations
+        // to the top-left corner of the zoomed-in view (the default
+        // is the center of the view).
+        expandedImageView.setPivotX(0f);
+        expandedImageView.setPivotY(0f);
+
+        // Construct and run the parallel animation of the four translation and
+        // scale properties (X, Y, SCALE_X, and SCALE_Y).
+        AnimatorSet set = new AnimatorSet();
+        set
+                .play(ObjectAnimator.ofFloat(expandedImageView, View.X,
+                        startBounds.left, finalBounds.left))
+                .with(ObjectAnimator.ofFloat(expandedImageView, View.Y,
+                        startBounds.top, finalBounds.top))
+                .with(ObjectAnimator.ofFloat(expandedImageView, View.SCALE_X,
+                        startScale, 1f))
+                .with(ObjectAnimator.ofFloat(expandedImageView,
+                        View.SCALE_Y, startScale, 1f));
+        set.setDuration(mShortAnimationDuration);
+        set.setInterpolator(new DecelerateInterpolator());
+        set.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                mCurrentAnimator = null;
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animation) {
+                mCurrentAnimator = null;
+            }
+        });
+        set.start();
+        mCurrentAnimator = set;
+
+        // Upon clicking the zoomed-in image, it should zoom back down
+        // to the original bounds and show the thumbnail instead of
+        // the expanded image.
+        final float startScaleFinal = startScale;
+        expandedImageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (mCurrentAnimator != null) {
+                    mCurrentAnimator.cancel();
+                }
+
+                if (imageList.size() > 0) {
+                    list_container.setVisibility(View.VISIBLE);
+                }
+                btn_container.setVisibility(View.VISIBLE);
+
+                // Animate the four positioning/sizing properties in parallel,
+                // back to their original values.
+                AnimatorSet set = new AnimatorSet();
+                set.play(ObjectAnimator
+                        .ofFloat(expandedImageView, View.X, startBounds.left))
+                        .with(ObjectAnimator
+                                .ofFloat(expandedImageView,
+                                        View.Y,startBounds.top))
+                        .with(ObjectAnimator
+                                .ofFloat(expandedImageView,
+                                        View.SCALE_X, startScaleFinal))
+                        .with(ObjectAnimator
+                                .ofFloat(expandedImageView,
+                                        View.SCALE_Y, startScaleFinal));
+                set.setDuration(mShortAnimationDuration);
+                set.setInterpolator(new DecelerateInterpolator());
+                set.addListener(new AnimatorListenerAdapter() {
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        thumbView.setAlpha(1f);
+                        expandedImageView.setVisibility(View.GONE);
+                        mCurrentAnimator = null;
+                    }
+
+                    @Override
+                    public void onAnimationCancel(Animator animation) {
+                        thumbView.setAlpha(1f);
+                        expandedImageView.setVisibility(View.GONE);
+                        mCurrentAnimator = null;
+                    }
+                });
+                set.start();
+                mCurrentAnimator = set;
+            }
+        });
     }
 }
