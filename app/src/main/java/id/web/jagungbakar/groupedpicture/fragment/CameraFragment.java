@@ -28,6 +28,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
+import android.webkit.MimeTypeMap;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -49,6 +50,8 @@ import java.util.List;
 
 import id.web.jagungbakar.groupedpicture.R;
 import id.web.jagungbakar.groupedpicture.ImageListAdapter;
+import id.web.jagungbakar.groupedpicture.controllers.PictureController;
+import id.web.jagungbakar.groupedpicture.models.Pictures;
 
 public class CameraFragment extends Fragment {
 
@@ -159,8 +162,11 @@ public class CameraFragment extends Fragment {
             imageList.add(map);
 
             HashMap<String,String> mapAttr = new HashMap<>();
-            mapAttr.put("mCurrentFileName", mCurrentFileName);
-            mapAttr.put("current_path", mCurrentPhotoPath);
+            mapAttr.put("file_name", mCurrentFileName);
+            mapAttr.put("file_path", mCurrentPhotoPath);
+            mapAttr.put("file_dir", mCurrentFilePath);
+            mapAttr.put("file_type", mCurrentFileType);
+            mapAttr.put("file_size", ""+ imageBitmap.getByteCount());
             imageListAttributes.add(mapAttr);
 
             current_preview = imageList.size() - 1;
@@ -201,6 +207,9 @@ public class CameraFragment extends Fragment {
             HashMap<String,String> mapAttr = new HashMap<>();
             mapAttr.put("file_name", mCurrentFileName);
             mapAttr.put("file_path", mCurrentPhotoPath);
+            mapAttr.put("file_dir", mCurrentFilePath);
+            mapAttr.put("file_type", mCurrentFileType);
+            mapAttr.put("file_size", "0");
             imageListAttributes.add(mapAttr);
 
             current_preview = imageList.size() - 1;
@@ -251,6 +260,21 @@ public class CameraFragment extends Fragment {
     }
 
     public void saveImage() {
+        // save to dbs
+        for (int i = 0; i < imageListAttributes.size(); i++) {
+            File file = new File(storageDir.getPath() + "/" + imageListAttributes.get(i).get("file_name"));
+            int file_size = Integer.parseInt(String.valueOf(file.length()/1024));
+
+            Pictures pictures = new Pictures(
+                    imageListAttributes.get(i).get("file_name"),
+                    imageListAttributes.get(i).get("file_type"),
+                    file_size,
+                    imageListAttributes.get(i).get("file_dir"),
+                    0
+            );
+            int id = PictureController.getInstance().addPicture(pictures);
+        }
+
         imageList.clear();
         imageListAttributes.clear();
 
@@ -277,6 +301,8 @@ public class CameraFragment extends Fragment {
 
     String mCurrentPhotoPath;
     String mCurrentFileName;
+    String mCurrentFilePath;
+    String mCurrentFileType;
     private File storageDir;
 
     private File createImageFile() throws IOException {
@@ -305,6 +331,13 @@ public class CameraFragment extends Fragment {
         // Save a file: path for use with ACTION_VIEW intents
         mCurrentPhotoPath = image.getAbsolutePath();
         mCurrentFileName = image.getName();
+        mCurrentFilePath = storageDir.getPath();
+
+        MimeTypeMap mime = MimeTypeMap.getSingleton();
+        int index = image.getName().lastIndexOf('.')+1;
+        String ext = image.getName().substring(index).toLowerCase();
+        String type = mime.getMimeTypeFromExtension(ext);
+        mCurrentFileType = type;
 
         return image;
     }

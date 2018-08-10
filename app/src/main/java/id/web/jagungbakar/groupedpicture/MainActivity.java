@@ -9,13 +9,18 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.MenuItem;
 import android.widget.TextView;
 
+import id.web.jagungbakar.groupedpicture.controllers.PictureController;
 import id.web.jagungbakar.groupedpicture.fragment.CameraFragment;
 import id.web.jagungbakar.groupedpicture.fragment.LibraryFragment;
+import id.web.jagungbakar.groupedpicture.utils.Database;
+import id.web.jagungbakar.groupedpicture.utils.DatabaseHelper;
+import id.web.jagungbakar.groupedpicture.utils.DateTimeStrategy;
 
 public class MainActivity extends AppCompatActivity
         implements BottomNavigationView.OnNavigationItemSelectedListener {
 
     private android.support.v7.app.ActionBar actionBar;
+    public Database database;
 
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
@@ -44,6 +49,9 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // init core apps
+        initCoreApp();
+
         //loading the default fragment
         loadFragment(new CameraFragment());
 
@@ -54,6 +62,13 @@ public class MainActivity extends AppCompatActivity
 
         navigation.setSelectedItemId(R.id.navigation_camera);
         navigation.getMenu().getItem(1).setChecked(true);
+    }
+
+    private void initCoreApp() {
+        database = new DatabaseHelper(this);
+        PictureController.setDatabase(database);
+
+        DateTimeStrategy.setLocale("id", "ID");
     }
 
     private boolean loadFragment(Fragment fragment) {
